@@ -34,6 +34,12 @@ const TAIPEI_MRT_STATIONS = [
     'R',
     { padTwoDigits: true, offset: 2 },
   ),
+  {
+    name: '新北投',
+    line: 'red',
+    code: 'R22A',
+    branchOf: '北投',
+  },
 
   // 板南線（blue）→ BL01, BL02, ...
   ...buildStations(
@@ -47,17 +53,24 @@ const TAIPEI_MRT_STATIONS = [
     { padTwoDigits: true },
   ),
 
-  // 松山新店線（green）→ G01, G02, ...
+  // 松山新店線（green）
+  // 注意：小碧潭為七張支線站，代碼為 G03A，不影響主線編號（七張 G03、大坪林 G04 ...）
   ...buildStations(
     [
-      '新店', '新店區公所', '七張', '小碧潭', '大坪林', '景美', '萬隆', '公館',
-      '台電大樓', '古亭', '小南門', '西門', '北門', '中山', '松江南京',
+      '新店', '新店區公所', '七張', '大坪林', '景美', '萬隆', '公館',
+      '台電大樓', '古亭', '中正紀念堂', '小南門', '西門', '北門', '中山', '松江南京',
       '南京復興', '台北小巨蛋', '南京三民', '松山',
     ],
     'green',
     'G',
     { padTwoDigits: true },
   ),
+  {
+    name: '小碧潭',
+    line: 'green',
+    code: 'G03A',
+    branchOf: '七張',
+  },
 
   // 中和新蘆線（orange）→ O01, O02, ...
   ...buildStations(
@@ -88,8 +101,8 @@ const TAIPEI_MRT_STATIONS = [
   // 環狀線（yellow，部分站）→ Y01, Y02, ...
   ...buildStations(
     [
-      '大坪林', '十四張', '秀朗橋', '景平', '中和', '橋和', '中原',
-      '板新', '板橋', '新埔民生', '頭前庄', '新北產業園區', '幸福',
+      '大坪林', '十四張', '秀朗橋', '景平', '景安', '中和', '橋和', '中原',
+      '板新', '板橋', '新埔民生', '頭前庄', '幸福', '新北產業園區',
     ],
     'yellow',
     'Y',
@@ -101,7 +114,7 @@ const TAIPEI_MRT_STATIONS = [
     [
       '台北車站', '三重', '新北產業園區', '新莊副都心', '泰山', '泰山貴和',
       '體育大學', '長庚醫院', '林口', '山鼻', '坑口',
-      '機場第一航廈', '機場第二航廈', '機場旅館', '高鐵桃園站',
+      '機場第一航廈', '機場第二航廈',
     ],
     'purple',
     'A',
@@ -193,6 +206,14 @@ function App() {
             <div
               className={`station-name ${isAnimating ? 'station-name--shake' : ''} ${
                 currentStation ? `station-name--${currentStation.line}` : ''
+              } ${
+                currentStation && currentStation.name === '小碧潭'
+                  ? 'station-name--lightgreen'
+                  : ''
+              } ${
+                currentStation && currentStation.name === '新北投'
+                  ? 'station-name--pink'
+                  : ''
               }`}
             >
               {currentStation
