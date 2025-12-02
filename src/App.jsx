@@ -2,9 +2,17 @@ import { useState } from 'react'
 import './App.css'
 
 // 台北捷運站清單（含路線顏色與簡易代碼）
-// line 顏色代碼：
-// red: 淡水信義線、blue: 板南線、green: 松山新店線、
-// orange: 中和新蘆線、brown: 文湖線、yellow: 環狀線、purple: 機場捷運
+// 路線定義與顏色
+const LINE_META = {
+  red: { name: '淡水信義線', short: 'R' },
+  blue: { name: '板南線', short: 'BL' },
+  green: { name: '松山新店線', short: 'G' },
+  orange: { name: '中和新蘆線', short: 'O' },
+  brown: { name: '文湖線', short: 'BR' },
+  yellow: { name: '環狀線', short: 'Y' },
+  purple: { name: '機場捷運', short: 'A' },
+}
+
 const buildStations = (
   names,
   line,
@@ -145,34 +153,48 @@ const STATION_ATTRACTIONS = {
 function App() {
   const [currentStation, setCurrentStation] = useState(null)
   const [isAnimating, setIsAnimating] = useState(false)
+  const [enabledLines, setEnabledLines] = useState([])
+  const [noRepeatMode, setNoRepeatMode] = useState(false)
+  const [usedCodes, setUsedCodes] = useState([])
 
   const handleRandomPick = () => {
     if (isAnimating) return
 
-    const total = TAIPEI_MRT_STATIONS.length
-    if (total === 0) return
+    const activeLines = enabledLines.length ? enabledLines : Object.keys(LINE_META)
+
+    // 依照啟用路線與「不重複模式」建立候選清單
+    const candidatePool = TAIPEI_MRT_STATIONS.filter((station) => {
+      if (!activeLines.includes(station.line)) return false
+      if (noRepeatMode && usedCodes.includes(station.code)) return false
+      return true
+    })
+
+    if (candidatePool.length === 0) {
+      // 沒有可抽的站（可能是所有啟用路線都已抽完）
+      return
+    }
 
     setIsAnimating(true)
 
     // 先決定「最終抽到的站」，同時避免跟上一站相同
     let finalStation = currentStation
-    if (total === 1) {
-      finalStation = TAIPEI_MRT_STATIONS[0]
+    if (candidatePool.length === 1) {
+      finalStation = candidatePool[0]
     } else {
       let candidate = null
       let tries = 0
-      const maxTries = 20
+      const maxTries = 40
 
       while (
         (!candidate || candidate.code === currentStation?.code) &&
         tries < maxTries
       ) {
-        const randomIndex = Math.floor(Math.random() * total)
-        candidate = TAIPEI_MRT_STATIONS[randomIndex]
+        const randomIndex = Math.floor(Math.random() * candidatePool.length)
+        candidate = candidatePool[randomIndex]
         tries += 1
       }
 
-      finalStation = candidate || TAIPEI_MRT_STATIONS[0]
+      finalStation = candidate || candidatePool[0]
     }
 
     // 抽獎動畫：在短時間內不斷切換隨機站名，最後停在真正抽中的站
@@ -180,13 +202,18 @@ function App() {
     const rollDurationMs = 1000
 
     const intervalId = setInterval(() => {
-      const randomIndex = Math.floor(Math.random() * total)
-      setCurrentStation(TAIPEI_MRT_STATIONS[randomIndex])
+      const randomIndex = Math.floor(Math.random() * candidatePool.length)
+      setCurrentStation(candidatePool[randomIndex])
     }, rollIntervalMs)
 
     setTimeout(() => {
       clearInterval(intervalId)
       setCurrentStation(finalStation)
+      if (noRepeatMode && finalStation) {
+        setUsedCodes((prev) =>
+          prev.includes(finalStation.code) ? prev : [...prev, finalStation.code],
+        )
+      }
       setIsAnimating(false)
     }, rollDurationMs)
   }
@@ -202,19 +229,63 @@ function App() {
         </header>
 
         <main className="content">
+          <section className="controls">
+            <div className="controls-row">
+              <span className="controls-label">想抽哪些路線？</span>
+              <div className="line-chips">
+                {Object.entries(LINE_META).map(([key, meta]) => {
+                  const active = enabledLines.includes(key)
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      className={`line-chip ${active ? 'line-chip--active' : ''} line-chip--${key}`}
+                      onClick={() => {
+                        setEnabledLines((prev) =>
+                          prev.includes(key)
+                            ? prev.filter((l) => l !== key)
+                            : [...prev, key],
+                        )
+                      }}
+                    >
+                      <span className="line-chip__dot" />
+                      <span className="line-chip__text">
+                        {meta.short} · {meta.name}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+              <p style={{ fontSize: '0.9rem', color: '#999', margin: '8px 0' }}>
+                {enabledLines.length === 0 ? '(未選取任何路線時，將隨機抽取全部車站)' : ' '}
+              </p>
+            </div>
+
+            <label className="toggle">
+              <input
+                type="checkbox"
+                checked={noRepeatMode}
+                onChange={(e) => {
+                  setNoRepeatMode(e.target.checked)
+                  if (!e.target.checked) {
+                    setUsedCodes([])
+                  }
+                }}
+              />
+              <span className="toggle__label">本次抽獎不重複站點</span>
+            </label>
+          </section>
+
           <div className="station-card">
             <div
-              className={`station-name ${isAnimating ? 'station-name--shake' : ''} ${
-                currentStation ? `station-name--${currentStation.line}` : ''
-              } ${
-                currentStation && currentStation.name === '小碧潭'
+              className={`station-name ${isAnimating ? 'station-name--shake' : ''} ${currentStation ? `station-name--${currentStation.line}` : ''
+                } ${currentStation && currentStation.name === '小碧潭'
                   ? 'station-name--lightgreen'
                   : ''
-              } ${
-                currentStation && currentStation.name === '新北投'
+                } ${currentStation && currentStation.name === '新北投'
                   ? 'station-name--pink'
                   : ''
-              }`}
+                }`}
             >
               {currentStation
                 ? `${currentStation.name} (${currentStation.code})`
